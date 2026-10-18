@@ -20,11 +20,17 @@ def to_sql_claims(view: str, columns: list[str], rows: list) -> list[dict]:
              "kind": "number", "citation": f"sql:{view}"}
         )
     elif view == "v_order_summary":
-        total = sum(float(r["revenue"]) for r in rows)
+        # Cancelled orders are not revenue (MERGE-REV-01); pending is booked.
+        total = sum(float(r["revenue"] or 0) for r in rows if r["status"] != "cancelled")
         claims.append(
             {"subject": "total revenue", "value": f"{total:.2f}",
-             "kind": "number", "citation": f"sql:{view}"}
+             "kind": "number", "citation": f"sql:{view} (excl. cancelled)"}
         )
+        for r in rows:
+            claims.append(
+                {"subject": f"{r['status']} orders", "value": str(r["n"]),
+                 "kind": "number", "citation": f"sql:{view}"}
+            )
     elif view == "v_inventory_status":
         low = sum(1 for r in rows if r["flag"] == "low")
         claims.append(

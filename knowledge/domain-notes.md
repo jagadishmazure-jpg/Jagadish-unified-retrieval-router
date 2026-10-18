@@ -1,8 +1,9 @@
 # Knowledge: the data-agent retrieval pattern
 
-These notes distill the "data agent" pattern from industry literature on
-agentic AI (vendor ebooks and practitioner guides, paraphrased here in our
-own words -- no source text is reproduced).
+These notes describe the "data agent" pattern as this repo implements it:
+one entry point that decides whether a question needs the database, the
+documents, or both, and checks access before touching either. The wording
+and examples are original to this repo.
 
 ## The problem
 
@@ -41,5 +42,5 @@ deciding what to look at.
 - `router/classify.py`: ROUTE-SQL-01/02, ROUTE-RAG-01/02, ROUTE-BOTH-01
 - `router/govern.py`: POL-ACCESS-00/01/02, checked before execution
 - `router/merge.py`: MERGE-NUM-01 (structured wins numbers, conflict flagged)
-- `router/views.py`: strict view-aware authorizer + fetchmany cap
+- `router/views.py` + `router/authz.py`: role-scoped strict view-aware authorizer + fetchmany cap
 - `router/audit.py`: hash-chained log of every routing decision

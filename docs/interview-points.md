@@ -13,22 +13,23 @@ that decision needs to be explainable and audited -- not buried in a prompt.
 
 ## Design decisions to defend
 - **Rule-based classifier, not an LLM.** Routing determinism is the point:
-  52 tests pin every route. An LLM deciding what to look at is a black box
+  Regression tests pin every route. An LLM deciding what to look at is a black box
   at the worst possible layer.
 - **Governance before retrieval.** `govern.check` runs before any query.
   Checking after retrieval means the data was already read -- the audit log
   would record a violation, not prevent one.
-- **Strict view-aware authorizer.** The SQLite authorizer allows backing
-  tables only when not explicitly named in the query, so
-  `SELECT * FROM tickets, v_ticket_backlog` is denied even with the text
-  check disabled (tested). Text allowlist is the first layer, the
-  authorizer the backstop.
+- **Strict view-aware authorizer.** SQLite tells the authorizer which view
+  a base-table read is for. Reads are allowed only on behalf of one of the
+  caller's views, so `SELECT * FROM v_ticket_backlog, employees` is denied
+  even with the text check disabled (tested). The first version relied on
+  the text check alone and leaked salaries through a comma join; the review
+  story is in ADR 0001.
 - **Conflicts surfaced, not resolved silently.** MERGE-NUM-01: the database
   wins numeric disagreements, but both values and both citations stay in
   the output.
 
 ## Numbers to quote (all from real runs)
-- 52 tests, all green, stdlib only.
+- All tests green, stdlib only (`python3 scripts/count_tests.py` prints the total).
 - Live demo: "How many open tickets..." -> SQL says 5, docs say ~10;
   the router flags CONFLICT and cites both.
 - Governance: `analyst` asking for average salary -> denied with

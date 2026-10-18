@@ -9,12 +9,21 @@ from __future__ import annotations
 from pathlib import Path
 
 
+def _title(path: Path) -> str:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("# "):
+            return line[2:].strip()
+    return path.stem
+
+
 def _chunks(path: Path):
     text = path.read_text(encoding="utf-8")
     chunks = []
     section = path.stem
     buf: list[str] = []
     for line in text.splitlines():
+        if line.startswith("# "):
+            continue  # document title: not answer text (RAG-CHUNK-01)
         if line.startswith("## "):
             body = "\n".join(buf).strip()
             if body and len(body.split()) > 4:  # skip title-only intros
@@ -42,6 +51,7 @@ def load_corpus(root: str | Path) -> list[dict]:
                     {
                         "doc": path.name,
                         "set": sub,
+                        "title": _title(path),
                         "section": section,
                         "text": text,
                         "citation": f"{path.name} §{section}",

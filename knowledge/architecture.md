@@ -23,7 +23,7 @@ flowchart TB
 2. Every target view and doc set is policy-checked for the role *before*
    any query runs. Denials raise `AccessDenied` and are audited.
 3. SQL path: fixed per-view queries through the hardened gateway
-   (text allowlist + strict view-aware authorizer + fetchmany cap).
+   (text allowlist + role-scoped strict view-aware authorizer in authz.py + fetchmany cap).
 4. RAG path: TF-IDF over SOPs and (role permitting) email threads.
 5. Merge: claims carry `sql:<view>` or `file §section` citations;
    numeric conflicts prefer the database but are always surfaced.

@@ -5,7 +5,7 @@ How to adopt (or extend) the unified retrieval router.
 ## Run it
 
 ```bash
-python3 -m pytest tests/ -q          # 52 tests, stdlib only
+python3 -m pytest tests/ -q          # stdlib only
 python3 scripts/count_tests.py       # prints the real total
 streamlit run demo/app.py            # thin demo (pip install streamlit)
 ```
