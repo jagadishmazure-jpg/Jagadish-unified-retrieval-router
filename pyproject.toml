@@ -1,0 +1,14 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "jagadish-unified-retrieval-router"
+version = "0.1.0"
+description = "Data-agent retrieval router: one question, SQL and/or docs, governance at routing time."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+
+[tool.hatch.build.targets.wheel]
+packages = ["router"]
