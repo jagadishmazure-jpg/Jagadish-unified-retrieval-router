@@ -56,7 +56,8 @@ def answer(question: str, role: str = "analyst", con=None,
     rag_claims: list[dict] = []
     if decision["route"] in ("sql", "both"):
         for v in decision["sql_views"]:
-            cols, rows, _truncated = views.run_readonly(con, FIXED_SQL[v])
+            cols, rows, _truncated = views.run_readonly(
+                con, FIXED_SQL[v], allowed_views=govern.ROLE_VIEWS[role])
             sql_claims.extend(merge.to_sql_claims(v, cols, rows))
     if decision["route"] in ("rag", "both"):
         chunks = rag.search(corpus_index, question,

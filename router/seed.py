@@ -1,4 +1,4 @@
-"""Synthetic structured data for the fictional Harborline Goods.
+"""Synthetic structured data for the fictional Calvessa Goods.
 
 Deterministic: fixed rows, no randomness. Backs the router's SQL path.
 """
@@ -37,7 +37,7 @@ def seed(con: sqlite3.Connection) -> None:
             ("ORD-001", "Emberpine Outfitters", "Trail Backpack", 10, 899.90, "shipped", "2026-10-01"),
             ("ORD-002", "Cinder & Co.", "Camp Stove", 5, 749.75, "shipped", "2026-10-03"),
             ("ORD-003", "Northloop Books", "Desk Lamp", 20, 1199.60, "pending", "2026-10-05"),
-            ("ORD-004", "Palefire Cafe", "Espresso Kit", 2, 459.98, "cancelled", "2026-10-06"),
+            ("ORD-004", "Brisquel Cafe", "Espresso Kit", 2, 459.98, "cancelled", "2026-10-06"),
             ("ORD-005", "Quill & Bolt", "Notebook Set", 50, 1249.50, "shipped", "2026-10-08"),
             ("ORD-006", "Sablewood Studio", "Canvas Pack", 15, 674.85, "pending", "2026-10-10"),
         ],
@@ -58,7 +58,7 @@ def seed(con: sqlite3.Connection) -> None:
             ("TKT-01", "Emberpine Outfitters", "P1", "shipping", "open", "2026-10-12"),
             ("TKT-02", "Cinder & Co.", "P2", "returns", "open", "2026-10-13"),
             ("TKT-03", "Northloop Books", "P3", "billing", "open", "2026-10-14"),
-            ("TKT-04", "Palefire Cafe", "P2", "product", "open", "2026-10-15"),
+            ("TKT-04", "Brisquel Cafe", "P2", "product", "open", "2026-10-15"),
             ("TKT-05", "Quill & Bolt", "P3", "shipping", "closed", "2026-10-09"),
             ("TKT-06", "Sablewood Studio", "P1", "product", "closed", "2026-10-07"),
             ("TKT-07", "Emberpine Outfitters", "P2", "returns", "open", "2026-10-16"),

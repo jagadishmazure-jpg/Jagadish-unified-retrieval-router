@@ -1,14 +1,14 @@
 """Tests for the unified retrieval router (deterministic, no network)."""
 
 import sqlite3
+from pathlib import Path
 
 import pytest
 
-from router import audit, classify, corpus, govern, merge, rag, seed, views
-from router import demo_helpers, router
+from router import audit, authz, classify, corpus, demo_helpers, govern, merge, rag, router, seed, views
 from router.views import GatewayError
 
-DOCS = "/home/hatch/workspace/github-scaffolds/Jagadish-unified-retrieval-router/docs"
+DOCS = Path(__file__).resolve().parents[1] / "docs"
 
 
 @pytest.fixture()
@@ -174,10 +174,6 @@ def test_gateway_caps_at_fetch_time(con, monkeypatch):
         "CREATE VIEW v_big AS SELECT t.ticket_id FROM tickets t, inventory i, orders o"
     )
     monkeypatch.setattr(views, "ALLOWED_VIEWS", views.ALLOWED_VIEWS | {"v_big"})
-    monkeypatch.setattr(
-        views, "VIEW_BACKING",
-        {**views.VIEW_BACKING, "v_big": {"tickets", "inventory", "orders"}},
-    )
     cols, rows, truncated = views.run_readonly(con, "SELECT * FROM v_big")
     assert len(rows) == views.ROW_CAP
     assert truncated
@@ -188,10 +184,6 @@ def test_gateway_caps_limit_comment_bypass(con, monkeypatch):
         "CREATE VIEW v_big2 AS SELECT t.ticket_id FROM tickets t, inventory i, orders o"
     )
     monkeypatch.setattr(views, "ALLOWED_VIEWS", views.ALLOWED_VIEWS | {"v_big2"})
-    monkeypatch.setattr(
-        views, "VIEW_BACKING",
-        {**views.VIEW_BACKING, "v_big2": {"tickets", "inventory", "orders"}},
-    )
     cols, rows, truncated = views.run_readonly(con, "SELECT * FROM v_big2 LIMIT 100000 -- x")
     assert len(rows) == views.ROW_CAP
     assert truncated
@@ -200,28 +192,27 @@ def test_gateway_caps_limit_comment_bypass(con, monkeypatch):
 def test_authorizer_denies_comma_join_without_text_check(con):
     # New standing rule: test the authorizer with the text check disabled.
     sql = "SELECT * FROM tickets, v_ticket_backlog"
-    with views.views_only(con, sql):
+    with authz.views_only(con, views.ALLOWED_VIEWS):
         with pytest.raises(sqlite3.DatabaseError):
             con.execute(sql).fetchall()
 
 
 def test_authorizer_denies_quoted_sqlite_master_without_text_check(con):
     sql = 'SELECT name FROM "sqlite_master"'
-    with views.views_only(con, sql):
+    with authz.views_only(con, views.ALLOWED_VIEWS):
         with pytest.raises(sqlite3.DatabaseError):
             con.execute(sql).fetchall()
 
 
 def test_authorizer_allows_view_expansion(con):
     sql = "SELECT * FROM v_ticket_backlog"
-    with views.views_only(con, sql):
+    with authz.views_only(con, views.ALLOWED_VIEWS):
         rows = con.execute(sql).fetchall()
     assert len(rows) == 5
 
 
 def test_authorizer_cleared_on_exit(con):
-    sql = "SELECT * FROM v_ticket_backlog"
-    with views.views_only(con, sql):
+    with authz.views_only(con, views.ALLOWED_VIEWS):
         pass
     # DDL works again once the authorizer is cleared
     con.execute("CREATE TABLE t_tmp(x INTEGER)")
@@ -410,3 +401,46 @@ def test_format_answer_contains_route():
            "reason": "why", "answer": "the answer"}
     text = demo_helpers.format_answer(res)
     assert "both" in text and "ROUTE-BOTH-01" in text
+
+
+# ---------- review fixes (grokbot-portfolio, 2026-10-18) ----------
+def test_docs_index_is_repo_relative():
+    # The suite used to read an absolute path from one developer machine.
+    idx = router.default_index()
+    assert idx["n"] > 0
+    assert all(not d["text"].startswith("# ") for d, _tf, _n in idx["docs"])  # no title-only chunks
+
+
+def test_gateway_denies_salary_comma_join_with_text_check_on(con):
+    for sql in ("SELECT * FROM v_ticket_backlog, employees",
+                "SELECT * FROM v_ticket_backlog, (employees)",
+                'SELECT name, salary FROM v_order_summary, "employees"'):
+        with pytest.raises(GatewayError):
+            views.run_readonly(con, sql)
+
+
+def test_gateway_is_role_scoped(con):
+    with pytest.raises(GatewayError):
+        views.run_readonly(con, "SELECT * FROM v_salaries", allowed_views=govern.ROLE_VIEWS["analyst"])
+    cols, rows, _t = views.run_readonly(con, "SELECT * FROM v_salaries", allowed_views=govern.ROLE_VIEWS["hr_admin"])
+    assert "salary" in cols and rows
+
+
+def test_revenue_excludes_cancelled_orders(con):
+    cols, rows, _t = views.run_readonly(con, "SELECT * FROM v_order_summary")
+    claims = merge.to_sql_claims("v_order_summary", cols, rows)
+    revenue = next(c for c in claims if c["subject"] == "total revenue")
+    assert revenue["value"] == "4773.60"  # 5233.58 minus cancelled ORD-004 (459.98)
+    assert {"cancelled orders", "shipped orders", "pending orders"} <= {c["subject"] for c in claims}
+
+
+def test_question_words_do_not_drive_ranking(index):
+    hits = rag.search(index, "What is our return policy?")
+    assert [h["doc"] for h in hits] == ["returns-policy.md"] * 3
+    hits = rag.search(index, "what is the shipping policy")
+    assert hits[0]["doc"] == "shipping-sop.md"
+
+
+def test_email_found_by_subject_line(index):
+    hits = rag.search(index, "What did the supplier say about the delay?", allowed_sets={"sops", "emails"})
+    assert hits and hits[0]["doc"] == "email-01-supplier-delay.md"
